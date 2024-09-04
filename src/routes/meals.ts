@@ -65,6 +65,23 @@ export async function mealsRoutes(app: FastifyInstance) {
     }
   })
 
+  app.get('/total', {
+    preHandler: [checkSessionIdExists, checkSessionIdIsEqualUserSessionId],
+  }, async (request) => {
+    const { sessionId } = request.cookies
+
+    const [user] = await knex('users')
+      .where({ session_id: sessionId })
+
+    const quantityOfAllMeals = await knex('meals').where({ user_id: user.id })
+
+    return {
+      meals: {
+        total: quantityOfAllMeals.length
+      }
+    }
+  })
+
   app.put('/:id', {
     preHandler: [checkSessionIdExists, checkSessionIdIsEqualUserSessionId],
   }, async (request, reply) => {

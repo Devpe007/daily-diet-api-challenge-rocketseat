@@ -4,7 +4,7 @@ import type { Knex } from "knex";
 export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('meals', (table) => {
     table.uuid('id').primary()
-    table.uuid('session_id').notNullable().unique()
+    table.uuid('user_id').references('user.id')
     table.string('name').notNullable()
     table.string('description')
     table.boolean('in_diet').defaultTo(false)

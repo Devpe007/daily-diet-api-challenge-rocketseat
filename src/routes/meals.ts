@@ -3,6 +3,7 @@ import { z } from "zod";
 import { knex } from "../database/config";
 import crypto from 'node:crypto'
 import { checkSessionIdExists } from "../middlewares/check-session-id-exists";
+import { checkSessionIdIsEqualUserSessionId } from "../middlewares/check-session-id-is-equal-user-session-id";
 
 export async function mealsRoutes(app: FastifyInstance) {
   app.post('/', {
@@ -18,19 +19,24 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     let sessionId = request.cookies.sessionId
 
+    const [user] = await knex('users')
+      .where({
+        session_id: sessionId,
+      })
+
     await knex('meals').insert({
       id: crypto.randomUUID(),
       name,
       description,
       in_diet,
-      session_id: sessionId
+      user_id: user.id
     })
 
     return reply.status(201).send()
   })
 
   app.get('/', {
-    preHandler: [checkSessionIdExists],
+    preHandler: [checkSessionIdExists, checkSessionIdIsEqualUserSessionId],
   }, async (request, reply) => {
     const meals = await knex('meals').select()
 
@@ -40,10 +46,8 @@ export async function mealsRoutes(app: FastifyInstance) {
   })
 
   app.get('/:id', {
-    preHandler: [checkSessionIdExists],
+    preHandler: [checkSessionIdExists, checkSessionIdIsEqualUserSessionId],
   }, async (request) => {
-    const { sessionId } = request.cookies
-
     const getMealParamsSchema = z.object({
       id: z.string().uuid(),
     })
@@ -52,7 +56,6 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     const meal = await knex('meals')
       .where({
-        session_id: sessionId,
         id,
       })
       .first()
@@ -63,7 +66,7 @@ export async function mealsRoutes(app: FastifyInstance) {
   })
 
   app.put('/:id', {
-    preHandler: [checkSessionIdExists],
+    preHandler: [checkSessionIdExists, checkSessionIdIsEqualUserSessionId],
   }, async (request, reply) => {
     const getMealIdParamsSchema = z.object({
       id: z.string().uuid(),
@@ -90,10 +93,8 @@ export async function mealsRoutes(app: FastifyInstance) {
   })
 
   app.delete('/:id', {
-    preHandler: [checkSessionIdExists],
+    preHandler: [checkSessionIdExists, checkSessionIdIsEqualUserSessionId],
   }, async (request, reply) => {
-    const { sessionId } = request.cookies
-
     const getMealParamsSchema = z.object({
       id: z.string().uuid(),
     })
@@ -102,7 +103,6 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     await knex('meals')
       .where({
-        session_id: sessionId,
         id,
       })
       .del()

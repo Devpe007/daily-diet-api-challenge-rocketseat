@@ -69,11 +69,20 @@ export async function mealsRoutes(app: FastifyInstance) {
     preHandler: [checkSessionIdExists, checkSessionIdIsEqualUserSessionId],
   }, async (request) => {
     const { sessionId } = request.cookies
+    const { in_diet } = request.query
+
+    console.log(in_diet)
 
     const [user] = await knex('users')
       .where({ session_id: sessionId })
 
-    const quantityOfAllMeals = await knex('meals').where({ user_id: user.id })
+    const query = knex('meals').where({ user_id: user.id });
+
+    if (typeof in_diet !== 'undefined') {
+      query.andWhere({ in_diet });
+    }
+
+    const quantityOfAllMeals = await query;
 
     return {
       meals: {

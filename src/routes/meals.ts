@@ -16,13 +16,53 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     const { name, description, in_diet } = createMealBodySchema.parse(request.body)
 
-    const meal = await knex('meals').insert({
+    let sessionId = request.cookies.sessionId
+
+    await knex('meals').insert({
       id: crypto.randomUUID(),
       name,
       description,
-      in_diet
+      in_diet,
+      session_id: sessionId
     })
 
     return reply.status(201).send()
+  })
+
+  app.get('/', {
+    preHandler: [checkSessionIdExists],
+  }, async (request, reply) => {
+    const meals = await knex('meals').select()
+
+    return {
+      meals,
+    }
+  })
+
+  app.put('/:id', {
+    preHandler: [checkSessionIdExists],
+  }, async (request, reply) => {
+    const getMealIdParamsSchema = z.object({
+      id: z.string().uuid(),
+    })
+
+    const updateMealBodyShema = z.object({
+      name: z.string(),
+      description: z.string(),
+      in_diet: z.boolean(),
+    })
+
+    const { id } = getMealIdParamsSchema.parse(request.params)
+    const { name, description, in_diet } = updateMealBodyShema.parse(request.body)
+
+    await knex('meals').update({
+      name,
+      description,
+      in_diet
+    }).where({
+      id
+    })
+
+    return reply.status(200).send()
   })
 }
